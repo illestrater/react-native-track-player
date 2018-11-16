@@ -84,7 +84,7 @@ public class MetadataManager {
         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT);
 
         // Stops the playback when the notification is swiped away
-        builder.setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(service, PlaybackStateCompat.ACTION_STOP));
+        // builder.setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(service, PlaybackStateCompat.ACTION_STOP));
 
         // Make it visible in the lockscreen
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
