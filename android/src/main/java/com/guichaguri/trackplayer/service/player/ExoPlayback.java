@@ -1,6 +1,7 @@
 package com.guichaguri.trackplayer.service.player;
 
 import android.content.Context;
+import android.media.audiofx.Visualizer;
 import android.support.v4.media.session.PlaybackStateCompat;
 import com.facebook.react.bridge.Promise;
 import com.google.android.exoplayer2.C;
@@ -42,6 +43,9 @@ public class ExoPlayback implements EventListener {
 
     private ConcatenatingMediaSource source;
     private List<Track> queue = Collections.synchronizedList(new ArrayList<>());
+    private Boolean initializedLevels = false;
+    private Visualizer visualizer;
+    private int captureSize;
 
     // https://github.com/google/ExoPlayer/issues/2728
     private int lastKnownWindow = C.INDEX_UNSET;
@@ -222,6 +226,24 @@ public class ExoPlayback implements EventListener {
 
     public void seekTo(long time) {
         player.seekTo(time);
+    }
+
+    public String getLevels() {
+        if (!initializedLevels) {
+            this.visualizer = new Visualizer(player.getAudioSessionId());
+            this.visualizer.setEnabled(true);
+            this.captureSize = visualizer.getCaptureSize();
+            initializedLevels = true;
+        }
+
+        byte[] fft = new byte[captureSize];
+        this.visualizer.getFft(fft);
+        String byteData = "";
+        for(byte b: fft){
+            byteData = byteData + (int) b + ",";
+        }
+
+        return byteData;
     }
 
     public float getVolume() {
