@@ -1,5 +1,6 @@
 package com.guichaguri.trackplayer.service.player;
 
+import android.util.Log;
 import android.content.Context;
 import android.media.audiofx.Visualizer;
 import android.support.v4.media.session.PlaybackStateCompat;
@@ -230,6 +231,10 @@ public class ExoPlayback implements EventListener {
 
     public String getLevels() {
         if (!initializedLevels) {
+            if (player.getAudioSessionId() == 0) {
+                return null;
+            }
+
             this.visualizer = new Visualizer(player.getAudioSessionId());
             this.visualizer.setEnabled(true);
             this.captureSize = visualizer.getCaptureSize();
