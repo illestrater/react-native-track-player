@@ -41,7 +41,7 @@ public class MusicService extends HeadlessJsTaskService {
     @Nullable
     @Override
     public IBinder onBind(Intent intent) {
-        if(Utils.CONNECT_INTENT.equals(intent.getAction())) {
+        if(intent != null && Utils.CONNECT_INTENT.equals(intent.getAction())) {
             return new MusicBinder(this, manager);
         }
 
