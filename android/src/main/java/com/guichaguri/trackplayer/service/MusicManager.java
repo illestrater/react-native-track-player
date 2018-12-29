@@ -28,6 +28,7 @@ import com.guichaguri.trackplayer.module.MusicEvents;
 import com.guichaguri.trackplayer.service.metadata.MetadataManager;
 import com.guichaguri.trackplayer.service.models.Track;
 import com.guichaguri.trackplayer.service.player.ExoPlayback;
+import com.guichaguri.trackplayer.service.player.LocalPlayback;
 
 import static com.google.android.exoplayer2.DefaultLoadControl.*;
 
@@ -56,6 +57,7 @@ public class MusicManager implements OnAudioFocusChangeListener {
             }
         }
     };
+    private boolean receivingNoisyEvents = false;
 
     private boolean stopWithApp = false;
 
@@ -96,9 +98,13 @@ public class MusicManager implements OnAudioFocusChangeListener {
         }
 
         this.playback = playback;
+
+        if(this.playback != null) {
+            this.playback.initialize();
+        }
     }
 
-    public ExoPlayback createLocalPlayback(Bundle options) {
+    public LocalPlayback createLocalPlayback(Bundle options) {
         int minBuffer = (int)Utils.toMillis(options.getDouble("minBuffer", Utils.toSeconds(DEFAULT_MIN_BUFFER_MS)));
         int maxBuffer = (int)Utils.toMillis(options.getDouble("maxBuffer", Utils.toSeconds(DEFAULT_MAX_BUFFER_MS)));
         int playBuffer = (int)Utils.toMillis(options.getDouble("playBuffer", Utils.toSeconds(DEFAULT_BUFFER_FOR_PLAYBACK_MS)));
@@ -114,7 +120,7 @@ public class MusicManager implements OnAudioFocusChangeListener {
         player.setAudioAttributes(new com.google.android.exoplayer2.audio.AudioAttributes.Builder()
                 .setContentType(C.CONTENT_TYPE_MUSIC).setUsage(C.USAGE_MEDIA).build());
 
-        return new ExoPlayback(service, this, player, cacheMaxSize);
+        return new LocalPlayback(service, this, player, cacheMaxSize);
     }
 
     @SuppressLint("WakelockTimeout")
@@ -128,6 +134,11 @@ public class MusicManager implements OnAudioFocusChangeListener {
         if(!playback.isRemote()) {
             requestFocus();
 
+            if(!receivingNoisyEvents) {
+                service.registerReceiver(noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+                receivingNoisyEvents = true;
+            }
+
             if(!wakeLock.isHeld()) wakeLock.acquire();
 
             if(!Utils.isLocal(track.uri)) {
@@ -135,19 +146,23 @@ public class MusicManager implements OnAudioFocusChangeListener {
             }
         }
 
-        metadata.setForeground(true, true);
+        metadata.setActive(true);
     }
 
     public void onPause() {
         Log.d(Utils.LOG, "onPause");
 
+        // Unregisters the noisy receiver
+        if(receivingNoisyEvents) {
+            service.unregisterReceiver(noisyReceiver);
+            receivingNoisyEvents = false;
+        }
+
         // Release the wake and the wifi locks
         if(wakeLock.isHeld()) wakeLock.release();
         if(wifiLock.isHeld()) wifiLock.release();
 
-        abandonFocus();
-
-        metadata.setForeground(false, true);
+        metadata.setActive(true);
     }
 
     public void onStop() {
@@ -159,7 +174,7 @@ public class MusicManager implements OnAudioFocusChangeListener {
 
         abandonFocus();
 
-        metadata.setForeground(false, false);
+        metadata.setActive(false);
     }
 
     public void onStateChange(int state) {
@@ -256,10 +271,6 @@ public class MusicManager implements OnAudioFocusChangeListener {
         }
 
         hasAudioFocus = r == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-
-        if(hasAudioFocus) {
-            service.registerReceiver(noisyReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
-        }
     }
 
     private void abandonFocus() {
@@ -279,10 +290,6 @@ public class MusicManager implements OnAudioFocusChangeListener {
         }
 
         hasAudioFocus = r != AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
-
-        if(!hasAudioFocus) {
-            service.unregisterReceiver(noisyReceiver);
-        }
     }
 
     public void destroy() {
@@ -290,6 +297,12 @@ public class MusicManager implements OnAudioFocusChangeListener {
 
         // Disable audio focus
         abandonFocus();
+
+        // Stop receiving audio becoming noisy events
+        if(receivingNoisyEvents) {
+            service.unregisterReceiver(noisyReceiver);
+            receivingNoisyEvents = false;
+        }
 
         // Release the playback resources
         if(playback != null) playback.destroy();

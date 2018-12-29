@@ -1,6 +1,5 @@
 package com.guichaguri.trackplayer.service.metadata;
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -11,7 +10,6 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationCompat.Action;
-import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.RatingCompat;
 import android.support.v4.media.app.NotificationCompat.MediaStyle;
@@ -41,7 +39,6 @@ public class MetadataManager {
     private final MusicManager manager;
     private final MediaSessionCompat session;
 
-    private boolean foreground = false;
     private int ratingType = RatingCompat.RATING_NONE;
     private int jumpInterval = 15;
     private long actions = 0;
@@ -84,7 +81,7 @@ public class MetadataManager {
         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT);
 
         // Stops the playback when the notification is swiped away
-        // builder.setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(service, PlaybackStateCompat.ACTION_STOP));
+        builder.setDeleteIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(service, PlaybackStateCompat.ACTION_STOP));
 
         // Make it visible in the lockscreen
         builder.setVisibility(NotificationCompat.VISIBILITY_PUBLIC);
@@ -225,7 +222,6 @@ public class MetadataManager {
     public void updatePlayback(ExoPlayback playback) {
         int state = playback.getState();
         boolean playing = Utils.isPlaying(state);
-        MediaStyle style = new MediaStyle();
         List<Integer> compact = new ArrayList<>();
         builder.mActions.clear();
 
@@ -236,32 +232,43 @@ public class MetadataManager {
 
         if(playing) {
             addAction(pauseAction, PlaybackStateCompat.ACTION_PAUSE, compact);
-            style.setShowCancelButton(false);
         } else {
             addAction(playAction, PlaybackStateCompat.ACTION_PLAY, compact);
-
-            // Shows the cancel button on pre-lollipop versions due to a bug
-            style.setShowCancelButton(true);
-            style.setCancelButtonIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(service, PlaybackStateCompat.ACTION_STOP));
         }
 
         addAction(stopAction, PlaybackStateCompat.ACTION_STOP, compact);
         addAction(forwardAction, PlaybackStateCompat.ACTION_FAST_FORWARD, compact);
         addAction(nextAction, PlaybackStateCompat.ACTION_SKIP_TO_NEXT, compact);
 
-        // Links the media session
-        style.setMediaSession(session.getSessionToken());
+        // Prevent the media style from being used in older Huawei devices that don't support custom styles
+        if(!Build.MANUFACTURER.toLowerCase().contains("huawei") || Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
 
-        // Updates the compact media buttons for the notification
-        if(!compact.isEmpty()) {
-            int[] compactIndexes = new int[compact.size()];
+            MediaStyle style = new MediaStyle();
 
-            for(int i = 0; i < compact.size(); i++) compactIndexes[i] = compact.get(i);
+            if(playing) {
+                style.setShowCancelButton(false);
+            } else {
+                // Shows the cancel button on pre-lollipop versions due to a bug
+                style.setShowCancelButton(true);
+                style.setCancelButtonIntent(MediaButtonReceiver.buildMediaButtonPendingIntent(service,
+                        PlaybackStateCompat.ACTION_STOP));
+            }
 
-            style.setShowActionsInCompactView(compactIndexes);
+            // Links the media session
+            style.setMediaSession(session.getSessionToken());
+
+            // Updates the compact media buttons for the notification
+            if (!compact.isEmpty()) {
+                int[] compactIndexes = new int[compact.size()];
+
+                for (int i = 0; i < compact.size(); i++) compactIndexes[i] = compact.get(i);
+
+                style.setShowActionsInCompactView(compactIndexes);
+            }
+
+            builder.setStyle(style);
+
         }
-
-        builder.setStyle(style);
 
         // Updates the media session state
         PlaybackStateCompat.Builder pb = new PlaybackStateCompat.Builder();
@@ -273,41 +280,24 @@ public class MetadataManager {
         updateNotification();
     }
 
-    public void setForeground(boolean foreground, boolean active) {
-        this.foreground = foreground;
+    public void setActive(boolean active) {
         this.session.setActive(active);
 
-        if(foreground) {
-            updateNotification();
-        } else {
-            service.stopForeground(false);
-        }
+        updateNotification();
     }
 
     public void destroy() {
-        if(foreground) {
-            NotificationManagerCompat.from(service).cancel(1);
-        } else {
-            service.stopForeground(true);
-        }
+        service.stopForeground(true);
 
         session.setActive(false);
         session.release();
     }
 
     private void updateNotification() {
-        int state = manager.getPlayback().getState();
-        if (Utils.isStopped(state)) {
-            removeNotifications();
-            return;
-        }
-
-        Notification n = builder.build();
-
-        if(foreground) {
-            service.startForeground(1, n);
+        if(session.isActive()) {
+            service.startForeground(1, builder.build());
         } else {
-            NotificationManagerCompat.from(service).notify(1, n);
+            service.stopForeground(true);
         }
     }
 
