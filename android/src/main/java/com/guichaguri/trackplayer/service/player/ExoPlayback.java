@@ -32,7 +32,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     final MusicManager manager;
     final T player;
 
-    private ConcatenatingMediaSource source;
     List<Track> queue = Collections.synchronizedList(new ArrayList<>());
     private Boolean initializedLevels = false;
     private Visualizer visualizer;
@@ -163,11 +162,11 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
     public String getLevels() {
         if (!initializedLevels) {
-            if (player.getAudioSessionId() == 0) {
+            if (player.getAudioComponent().getAudioSessionId() == 0) {
                 return null;
             }
 
-            this.visualizer = new Visualizer(player.getAudioSessionId());
+            this.visualizer = new Visualizer(player.getAudioComponent().getAudioSessionId());
             this.visualizer.setEnabled(true);
             this.captureSize = visualizer.getCaptureSize();
             initializedLevels = true;
