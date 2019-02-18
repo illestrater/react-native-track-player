@@ -91,10 +91,20 @@ public class LocalPlayback extends ExoPlayback<SimpleExoPlayer> {
 
     @Override
     public void remove(List<Integer> indexes, Promise promise) {
+        int currentIndex = player.getCurrentWindowIndex();
+
+        // Sort the list so we can loop through sequentially
         Collections.sort(indexes);
 
         for(int i = indexes.size() - 1; i >= 0; i--) {
             int index = indexes.get(i);
+
+            // Skip indexes that are the current track or are out of bounds
+            if(index == currentIndex || index < 0 || index >= queue.size()) {
+                // Resolve the promise when the last index is invalid
+                if(i == 0) promise.resolve(null);
+                continue;
+            }
 
             queue.remove(index);
 
@@ -150,8 +160,13 @@ public class LocalPlayback extends ExoPlayback<SimpleExoPlayer> {
 
     @Override
     public void reset() {
+        Track track = getCurrentTrack();
+        long position = player.getCurrentPosition();
+
         super.reset();
         resetQueue();
+
+        manager.onTrackUpdate(track, position, null);
     }
 
     @Override
