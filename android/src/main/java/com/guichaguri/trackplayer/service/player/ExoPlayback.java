@@ -276,7 +276,7 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
                 }
             }
         };
-        handler.postDelayed(runnable, delay); 
+        handler.postDelayed(runnable, delay);
         Log.d(Utils.LOG, "SET ID: " + setId + " COUNTRY: " + country);
     }
 
