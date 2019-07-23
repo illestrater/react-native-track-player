@@ -48,8 +48,10 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     protected final T player;
 
     private Boolean initializedLevels = false;
+    private Boolean initializedActiveListening = false;
     private Visualizer visualizer;
     private Handler handler = new Handler();
+    private Runnable runnable;
     private int captureSize;
     protected List<Track> queue = Collections.synchronizedList(new ArrayList<>());
 
@@ -149,7 +151,8 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     }
 
     public void pause() {
-        handler.removeCallbacksAndMessages(null);
+        handler.removeCallbacks(runnable);
+        handler.removeMessages(0);
         player.setPlayWhenReady(false);
     }
 
@@ -161,7 +164,8 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
         player.setPlayWhenReady(false);
         player.seekTo(0,0);
 
-        handler.removeCallbacksAndMessages(null);
+        handler.removeCallbacks(runnable);
+        handler.removeMessages(0);
     }
 
     public void reset() {
@@ -170,7 +174,9 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
         player.stop(true);
         player.setPlayWhenReady(false);
-        handler.removeCallbacksAndMessages(null);
+
+        handler.removeCallbacks(runnable);
+        handler.removeMessages(0);
     }
 
     public boolean isRemote() {
@@ -263,20 +269,23 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
     public void startActiveListen(String url, String jwt, String setId, String country) {
         int delay = 10000; //milliseconds
-        Runnable runnable = new Runnable() { 
-            @Override 
-            public void run() {
-                try{
-                    Log.d(Utils.LOG, "EVERY INTERVAL");
-                    postActiveListen(url, jwt, setId, country);
-                } catch (Exception e) {
-                    // TODO: handle exception
-                } finally {
-                    handler.postDelayed(this, delay); 
+        if (!initializedActiveListening) {
+            runnable = new Runnable() { 
+                @Override 
+                public void run() {
+                    try{
+                        Log.d(Utils.LOG, "EVERY INTERVAL");
+                        postActiveListen(url, jwt, setId, country);
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                    } finally {
+                        handler.postDelayed(this, delay); 
+                    }
                 }
-            }
-        };
-        handler.postDelayed(runnable, delay);
+            };
+            handler.postDelayed(runnable, delay);
+            initializedActiveListening = true;
+        }
         Log.d(Utils.LOG, "SET ID: " + setId + " COUNTRY: " + country);
     }
 
