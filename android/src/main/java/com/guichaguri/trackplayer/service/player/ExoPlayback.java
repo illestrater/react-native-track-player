@@ -5,6 +5,9 @@ import android.content.Context;
 import android.media.audiofx.Visualizer;
 import android.support.v4.media.session.PlaybackStateCompat;
 import android.util.Log;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import com.facebook.react.bridge.Promise;
 import com.google.android.exoplayer2.C;
 import com.google.android.exoplayer2.ExoPlaybackException;
@@ -22,6 +25,18 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import org.json.JSONObject;
+import org.json.JSONException;
+import com.android.volley.toolbox.Volley;
+import com.android.volley.RequestQueue;
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.AuthFailureError;
+import com.android.volley.toolbox.StringRequest;
+import com.android.volley.toolbox.JsonObjectRequest;
 
 /**
  * @author Guichaguri
@@ -34,6 +49,8 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
     private Boolean initializedLevels = false;
     private Visualizer visualizer;
+    private Handler handler = new Handler();
+    // private Handler handler = new Handler(Looper.getMainLooper());
     private int captureSize;
     protected List<Track> queue = Collections.synchronizedList(new ArrayList<>());
 
@@ -63,6 +80,15 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     public abstract void remove(List<Integer> indexes, Promise promise);
 
     public abstract void removeUpcomingTracks();
+
+    public void updateTrack(int index, Track track) {
+        int currentIndex = player.getCurrentWindowIndex();
+
+        queue.set(index, track);
+
+        if(currentIndex == index)
+            manager.getMetadata().updateMetadata(track);
+    }
 
     public Track getCurrentTrack() {
         int index = player.getCurrentWindowIndex();
@@ -124,6 +150,8 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     }
 
     public void pause() {
+        Log.d(Utils.LOG, "------- STOPPING WTF ------------");
+        handler.removeCallbacksAndMessages(null);
         player.setPlayWhenReady(false);
     }
 
@@ -134,6 +162,9 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
         player.stop(false);
         player.setPlayWhenReady(false);
         player.seekTo(0,0);
+
+        Log.d(Utils.LOG, "------- STOPPING WTF ------------");
+        handler.removeCallbacksAndMessages(null);
     }
 
     public void reset() {
@@ -142,6 +173,7 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
         player.stop(true);
         player.setPlayWhenReady(false);
+        handler.removeCallbacksAndMessages(null);
     }
 
     public boolean isRemote() {
@@ -201,10 +233,71 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
         player.setPlaybackParameters(new PlaybackParameters(rate, player.getPlaybackParameters().pitch));
     }
 
+    private void postActiveListen(String url, String jwt, String setId, String country) {
+        // HTTP POST
+        RequestQueue requestQueue = Volley.newRequestQueue(context);
+        JSONObject jsonObject = new JSONObject();
+        try {
+            jsonObject.put("setId", setId);
+            jsonObject.put("country", country);
+            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
+                @Override
+                public void onResponse(JSONObject response) {
+                    // do something...
+                }
+            }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    // do something...
+                }
+            }) {
+                @Override
+                public Map<String, String> getHeaders() throws AuthFailureError {
+                    final Map<String, String> headers = new HashMap<>();
+                    headers.put("Authorization", jwt);
+                    return headers;
+                }
+            };
+            requestQueue.add(jsonObjectRequest);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public void startActiveListen(String url, String jwt, String setId, String country) {
+        int delay = 10000; //milliseconds
+        Runnable runnable = new Runnable() { 
+            @Override 
+            public void run() {
+                try{
+                    Log.d(Utils.LOG, "EVERY INTERVAL");
+                    postActiveListen(url, jwt, setId, country);
+                } catch (Exception e) {
+                    // TODO: handle exception
+                } finally {
+                    //also call the same runnable to call it at regular interval
+                    handler.postDelayed(this, delay); 
+                }
+            }
+        };
+        handler.postDelayed(runnable, delay); 
+        // handlerThread = new HandlerThread("HandlerThread");
+        // handlerThread.start();
+        // handler = new Handler(handlerThread.getLooper());
+        // handler.postDelayed(new Runnable(){
+        //     public void run(){
+        //         Log.d(Utils.LOG, "EVERY INTERVAL");
+        //         // postActiveListen(url, jwt, setId, country);
+        //     }
+        // }, delay);
+        Log.d(Utils.LOG, "SET ID: " + setId + " COUNTRY: " + country);
+        // player.setPlaybackParameters(new PlaybackParameters(rate, player.getPlaybackParameters().pitch));
+    }
+
     public int getState() {
         switch(player.getPlaybackState()) {
             case Player.STATE_BUFFERING:
-                return player.getPlayWhenReady() ? PlaybackStateCompat.STATE_BUFFERING : PlaybackStateCompat.STATE_NONE;
+                return PlaybackStateCompat.STATE_BUFFERING;
             case Player.STATE_ENDED:
                 return PlaybackStateCompat.STATE_STOPPED;
             case Player.STATE_IDLE:
