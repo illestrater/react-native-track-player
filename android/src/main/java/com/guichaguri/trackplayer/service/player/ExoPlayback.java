@@ -50,7 +50,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     private Boolean initializedLevels = false;
     private Visualizer visualizer;
     private Handler handler = new Handler();
-    // private Handler handler = new Handler(Looper.getMainLooper());
     private int captureSize;
     protected List<Track> queue = Collections.synchronizedList(new ArrayList<>());
 
@@ -150,7 +149,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     }
 
     public void pause() {
-        Log.d(Utils.LOG, "------- STOPPING WTF ------------");
         handler.removeCallbacksAndMessages(null);
         player.setPlayWhenReady(false);
     }
@@ -163,7 +161,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
         player.setPlayWhenReady(false);
         player.seekTo(0,0);
 
-        Log.d(Utils.LOG, "------- STOPPING WTF ------------");
         handler.removeCallbacksAndMessages(null);
     }
 
@@ -275,23 +272,12 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
                 } catch (Exception e) {
                     // TODO: handle exception
                 } finally {
-                    //also call the same runnable to call it at regular interval
                     handler.postDelayed(this, delay); 
                 }
             }
         };
         handler.postDelayed(runnable, delay); 
-        // handlerThread = new HandlerThread("HandlerThread");
-        // handlerThread.start();
-        // handler = new Handler(handlerThread.getLooper());
-        // handler.postDelayed(new Runnable(){
-        //     public void run(){
-        //         Log.d(Utils.LOG, "EVERY INTERVAL");
-        //         // postActiveListen(url, jwt, setId, country);
-        //     }
-        // }, delay);
         Log.d(Utils.LOG, "SET ID: " + setId + " COUNTRY: " + country);
-        // player.setPlaybackParameters(new PlaybackParameters(rate, player.getPlaybackParameters().pitch));
     }
 
     public int getState() {
