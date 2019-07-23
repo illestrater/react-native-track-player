@@ -48,9 +48,11 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     protected final T player;
 
     private Boolean initializedLevels = false;
+    private Boolean initializedActiveListening = false;
+    private Handler handler = null;
+    private HandlerThread readThread = new HandlerThread("");
+    private Runnable runnable;
     private Visualizer visualizer;
-    private Handler handler = new Handler();
-    // private Handler handler = new Handler(Looper.getMainLooper());
     private int captureSize;
     protected List<Track> queue = Collections.synchronizedList(new ArrayList<>());
 
@@ -150,8 +152,11 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     }
 
     public void pause() {
-        Log.d(Utils.LOG, "------- STOPPING WTF ------------");
-        handler.removeCallbacksAndMessages(null);
+        initializedActiveListening = true;
+        if (handler != null) {
+            handler.removeCallbacks(runnable);
+            handler.removeMessages(0);
+        }
         player.setPlayWhenReady(false);
     }
 
@@ -163,8 +168,11 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
         player.setPlayWhenReady(false);
         player.seekTo(0,0);
 
-        Log.d(Utils.LOG, "------- STOPPING WTF ------------");
-        handler.removeCallbacksAndMessages(null);
+        initializedActiveListening = true;
+        if (handler != null) {
+            handler.removeCallbacks(runnable);
+            handler.removeMessages(0);
+        }
     }
 
     public void reset() {
@@ -173,7 +181,12 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
         player.stop(true);
         player.setPlayWhenReady(false);
-        handler.removeCallbacksAndMessages(null);
+
+        initializedActiveListening = true;
+        if (handler != null) {
+            handler.removeCallbacks(runnable);
+            handler.removeMessages(0);
+        }
     }
 
     public boolean isRemote() {
@@ -266,32 +279,26 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
 
     public void startActiveListen(String url, String jwt, String setId, String country) {
         int delay = 10000; //milliseconds
-        Runnable runnable = new Runnable() { 
-            @Override 
-            public void run() {
-                try{
-                    Log.d(Utils.LOG, "EVERY INTERVAL");
-                    postActiveListen(url, jwt, setId, country);
-                } catch (Exception e) {
-                    // TODO: handle exception
-                } finally {
-                    //also call the same runnable to call it at regular interval
-                    handler.postDelayed(this, delay); 
+        if (!initializedActiveListening) {
+            readThread.start();
+            handler = new Handler(readThread.getLooper());
+            runnable = new Runnable() { 
+                @Override 
+                public void run() {
+                    try{
+                        Log.d(Utils.LOG, "EVERY INTERVAL");
+                        postActiveListen(url, jwt, setId, country);
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                    } finally {
+                        handler.postDelayed(this, delay); 
+                    }
                 }
-            }
-        };
-        handler.postDelayed(runnable, delay); 
-        // handlerThread = new HandlerThread("HandlerThread");
-        // handlerThread.start();
-        // handler = new Handler(handlerThread.getLooper());
-        // handler.postDelayed(new Runnable(){
-        //     public void run(){
-        //         Log.d(Utils.LOG, "EVERY INTERVAL");
-        //         // postActiveListen(url, jwt, setId, country);
-        //     }
-        // }, delay);
+            };
+            handler.postDelayed(runnable, delay);
+            initializedActiveListening = true;
+        }
         Log.d(Utils.LOG, "SET ID: " + setId + " COUNTRY: " + country);
-        // player.setPlaybackParameters(new PlaybackParameters(rate, player.getPlaybackParameters().pitch));
     }
 
     public int getState() {
@@ -309,6 +316,11 @@ public abstract class ExoPlayback<T extends Player> implements EventListener {
     }
 
     public void destroy() {
+        initializedActiveListening = true;
+        if (handler != null) {
+            handler.removeCallbacks(runnable);
+            handler.removeMessages(0);
+        }
         player.release();
     }
 
