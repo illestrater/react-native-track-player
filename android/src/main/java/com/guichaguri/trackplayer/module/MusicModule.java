@@ -370,14 +370,6 @@ public class MusicModule extends ReactContextBaseJavaModule implements ServiceCo
     }
 
     @ReactMethod
-    public void startActiveListen(final String url, final String jwt, final String setId, final String country, final Promise callback) {
-        waitForConnection(() -> {
-            binder.getPlayback().startActiveListen(url, jwt, setId, country);
-            callback.resolve(null);
-        });
-    }
-
-    @ReactMethod
     public void getRate(final Promise callback) {
         waitForConnection(() -> callback.resolve(binder.getPlayback().getRate()));
     }

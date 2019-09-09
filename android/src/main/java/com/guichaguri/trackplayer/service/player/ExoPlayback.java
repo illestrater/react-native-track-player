@@ -32,14 +32,6 @@ import java.util.Map;
 import java.util.HashMap;
 import org.json.JSONObject;
 import org.json.JSONException;
-import com.android.volley.toolbox.Volley;
-import com.android.volley.RequestQueue;
-import com.android.volley.Request;
-import com.android.volley.Response;
-import com.android.volley.VolleyError;
-import com.android.volley.AuthFailureError;
-import com.android.volley.toolbox.StringRequest;
-import com.android.volley.toolbox.JsonObjectRequest;
 
 /**
  * @author Guichaguri
@@ -51,7 +43,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
     protected final T player;
 
     private Boolean initializedLevels = false;
-    private Boolean initializedActiveListening = false;
     private Visualizer visualizer;
     private Handler handler = new Handler();
     private Runnable runnable;
@@ -262,59 +253,6 @@ public abstract class ExoPlayback<T extends Player> implements EventListener, Me
 
     public void setRate(float rate) {
         player.setPlaybackParameters(new PlaybackParameters(rate, player.getPlaybackParameters().pitch));
-    }
-
-    private void postActiveListen(String url, String jwt, String setId, String country) {
-        // HTTP POST
-        RequestQueue requestQueue = Volley.newRequestQueue(context);
-        JSONObject jsonObject = new JSONObject();
-        try {
-            jsonObject.put("setId", setId);
-            jsonObject.put("country", country);
-            JsonObjectRequest jsonObjectRequest = new JsonObjectRequest(Request.Method.POST, url, jsonObject, new Response.Listener<JSONObject>() {
-                @Override
-                public void onResponse(JSONObject response) {
-                    // do something...
-                }
-            }, new Response.ErrorListener() {
-                @Override
-                public void onErrorResponse(VolleyError error) {
-                    // do something...
-                }
-            }) {
-                @Override
-                public Map<String, String> getHeaders() throws AuthFailureError {
-                    final Map<String, String> headers = new HashMap<>();
-                    headers.put("Authorization", jwt);
-                    return headers;
-                }
-            };
-            requestQueue.add(jsonObjectRequest);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public void startActiveListen(String url, String jwt, String setId, String country) {
-        int delay = 10000; //milliseconds
-        if (!initializedActiveListening) {
-            runnable = new Runnable() { 
-                @Override 
-                public void run() {
-                    try{
-                        Log.d(Utils.LOG, "EVERY INTERVAL");
-                        postActiveListen(url, jwt, setId, country);
-                    } catch (Exception e) {
-                        // TODO: handle exception
-                    } finally {
-                        handler.postDelayed(this, delay); 
-                    }
-                }
-            };
-            handler.postDelayed(runnable, delay);
-            initializedActiveListening = true;
-        }
-        Log.d(Utils.LOG, "SET ID: " + setId + " COUNTRY: " + country);
     }
 
     public int getState() {
