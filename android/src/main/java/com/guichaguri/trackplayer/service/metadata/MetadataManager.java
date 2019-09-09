@@ -9,12 +9,12 @@ import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.support.v4.app.NotificationCompat;
-import android.support.v4.app.NotificationCompat.Action;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationCompat.Action;
 import android.support.v4.media.MediaMetadataCompat;
 import android.support.v4.media.RatingCompat;
-import android.support.v4.media.app.NotificationCompat.MediaStyle;
-import android.support.v4.media.session.MediaButtonReceiver;
+import androidx.media.app.NotificationCompat.MediaStyle;
+import androidx.media.session.MediaButtonReceiver;
 import android.support.v4.media.session.MediaSessionCompat;
 import android.support.v4.media.session.PlaybackStateCompat;
 import com.bumptech.glide.Glide;
@@ -65,8 +65,7 @@ public class MetadataManager {
         this.builder = new NotificationCompat.Builder(service, Utils.NOTIFICATION_CHANNEL);
         this.session = new MediaSessionCompat(service, "TrackPlayer", null, null);
 
-        session.setFlags(MediaSessionCompat.FLAG_HANDLES_MEDIA_BUTTONS |
-                MediaSessionCompat.FLAG_HANDLES_TRANSPORT_CONTROLS);
+        session.setFlags(MediaSessionCompat.FLAG_HANDLES_QUEUE_COMMANDS);
         session.setCallback(new ButtonEvents(service, manager));
 
         Context context = service.getApplicationContext();
@@ -139,16 +138,16 @@ public class MetadataManager {
         }
 
         // Update the color
-        builder.setColor(options.getInt("color", NotificationCompat.COLOR_DEFAULT));
+        builder.setColor(Utils.getInt(options, "color", NotificationCompat.COLOR_DEFAULT));
 
         // Update the icon
         builder.setSmallIcon(getIcon(options, "icon", R.drawable.play));
 
         // Update the jump interval
-        jumpInterval = options.getInt("jumpInterval", 15);
+        jumpInterval = Utils.getInt(options, "jumpInterval", 15);
 
         // Update the rating type
-        ratingType = options.getInt("ratingType", RatingCompat.RATING_NONE);
+        ratingType = Utils.getInt(options, "ratingType", RatingCompat.RATING_NONE);
         session.setRatingType(ratingType);
 
         updateNotification();
