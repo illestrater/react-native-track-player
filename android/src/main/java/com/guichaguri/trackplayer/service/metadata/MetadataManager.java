@@ -142,7 +142,7 @@ public class MetadataManager {
         builder.setColor(options.getInt("color", NotificationCompat.COLOR_DEFAULT));
 
         // Update the icon
-        builder.setSmallIcon(getIcon(options, "icon", R.drawable.cueplay));
+        builder.setSmallIcon(getIcon(options, "icon", R.drawable.cue));
 
         // Update the jump interval
         jumpInterval = options.getInt("jumpInterval", 15);
