@@ -82,7 +82,7 @@ public class MetadataManager {
 
         builder.setContentIntent(PendingIntent.getActivity(context, 0, openApp, PendingIntent.FLAG_CANCEL_CURRENT));
 
-        builder.setSmallIcon(R.drawable.play);
+        builder.setSmallIcon(R.drawable.cue);
         builder.setCategory(NotificationCompat.CATEGORY_TRANSPORT);
 
         // Stops the playback when the notification is swiped away
@@ -122,9 +122,9 @@ public class MetadataManager {
             rewindAction = createAction(notification, PlaybackStateCompat.ACTION_REWIND, "Rewind",
                     getIcon(options, "rewindIcon", R.drawable.rewind));
             playAction = createAction(notification, PlaybackStateCompat.ACTION_PLAY, "Play",
-                    getIcon(options, "playIcon", R.drawable.play));
+                    getIcon(options, "playIcon", R.drawable.playnew));
             pauseAction = createAction(notification, PlaybackStateCompat.ACTION_PAUSE, "Pause",
-                    getIcon(options, "pauseIcon", R.drawable.pause));
+                    getIcon(options, "pauseIcon", R.drawable.pausenew));
             // stopAction = createAction(notification, PlaybackStateCompat.ACTION_STOP, "Stop",
             //         getIcon(options, "stopIcon", R.drawable.stop));
             stopAction = createAction(notification, PlaybackStateCompat.ACTION_STOP, "Stop",
