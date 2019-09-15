@@ -125,12 +125,16 @@ public class MetadataManager {
                     getIcon(options, "playIcon", R.drawable.play));
             pauseAction = createAction(notification, PlaybackStateCompat.ACTION_PAUSE, "Pause",
                     getIcon(options, "pauseIcon", R.drawable.pause));
+            // stopAction = createAction(notification, PlaybackStateCompat.ACTION_STOP, "Stop",
+            //         getIcon(options, "stopIcon", R.drawable.stop));
             stopAction = createAction(notification, PlaybackStateCompat.ACTION_STOP, "Stop",
-                    getIcon(options, "stopIcon", R.drawable.stop));
+                    getIcon(options, "stopIcon", R.drawable.cross));
             forwardAction = createAction(notification, PlaybackStateCompat.ACTION_FAST_FORWARD, "Forward",
                     getIcon(options, "forwardIcon", R.drawable.forward));
+            // nextAction = createAction(notification, PlaybackStateCompat.ACTION_SKIP_TO_NEXT, "Next",
+            //         getIcon(options, "nextIcon", R.drawable.next));
             nextAction = createAction(notification, PlaybackStateCompat.ACTION_SKIP_TO_NEXT, "Next",
-                    getIcon(options, "nextIcon", R.drawable.next));
+                    getIcon(options, "nextIcon", R.drawable.heart));
 
             // Update the action mask for the compact view
             if(compact != null) {
